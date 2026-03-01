@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/revealRoot"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#111111"
+    android:clickable="true"
+    android:focusable="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:gravity="center"
+        android:orientation="vertical"
+        android:padding="20dp">
+
+        <TextView
+            android:id="@+id/revealCardText"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="A♠"
+            android:textColor="#FFFFFF"
+            android:textSize="120sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/tapHintText"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="20dp"
+            android:text="Tap anywhere to dismiss"
+            android:textColor="#DDDDDD"
+            android:textSize="20sp" />
+    </LinearLayout>
+</FrameLayout>
