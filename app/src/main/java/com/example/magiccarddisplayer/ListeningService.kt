@@ -108,6 +108,7 @@ class ListeningService : Service() {
         val decoded = CardDecoder.decode(transcript) ?: return
         AppState.updateCard(decoded.display)
         vibrateSuccess()
+        TvRemoteController.sendReveal(decoded)
         showReveal(decoded)
     }
 

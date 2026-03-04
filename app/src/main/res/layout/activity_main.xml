@@ -10,35 +10,59 @@
         android:id="@+id/statusText"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="24dp"
+        android:layout_marginTop="8dp"
         android:text="Status: DISARMED"
-        android:textSize="28sp"
+        android:textSize="24sp"
         android:textStyle="bold" />
+
+    <TextView
+        android:id="@+id/connectionText"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:text="TV: disconnected"
+        android:textSize="14sp" />
+
+    <Button
+        android:id="@+id/reconnectButton"
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:layout_marginTop="12dp"
+        android:text="Discover/Connect TV"
+        android:textAllCaps="false" />
 
     <Button
         android:id="@+id/listenButton"
         android:layout_width="match_parent"
-        android:layout_height="72dp"
-        android:layout_marginTop="32dp"
-        android:text="Listen"
+        android:layout_height="64dp"
+        android:layout_marginTop="20dp"
+        android:text="ARM Listening"
         android:textAllCaps="false"
-        android:textSize="28sp" />
+        android:textSize="22sp" />
 
     <Button
         android:id="@+id/stopButton"
         android:layout_width="match_parent"
-        android:layout_height="72dp"
-        android:layout_marginTop="16dp"
+        android:layout_height="64dp"
+        android:layout_marginTop="12dp"
         android:enabled="false"
-        android:text="Stop"
+        android:text="DISARM"
         android:textAllCaps="false"
-        android:textSize="28sp" />
+        android:textSize="22sp" />
+
+    <Button
+        android:id="@+id/clearButton"
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:layout_marginTop="12dp"
+        android:text="Send CLEAR to TV"
+        android:textAllCaps="false" />
 
     <TextView
         android:id="@+id/lastTranscriptText"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="32dp"
+        android:layout_marginTop="24dp"
         android:text="Last transcript: -"
         android:textSize="16sp" />
 

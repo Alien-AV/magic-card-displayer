@@ -18,6 +18,7 @@ class MainActivity : ComponentActivity() {
     private lateinit var statusText: TextView
     private lateinit var transcriptText: TextView
     private lateinit var cardText: TextView
+    private lateinit var connectionText: TextView
     private lateinit var listenButton: Button
     private lateinit var stopButton: Button
 
@@ -37,11 +38,16 @@ class MainActivity : ComponentActivity() {
         statusText = findViewById(R.id.statusText)
         transcriptText = findViewById(R.id.lastTranscriptText)
         cardText = findViewById(R.id.lastCardText)
+        connectionText = findViewById(R.id.connectionText)
         listenButton = findViewById(R.id.listenButton)
         stopButton = findViewById(R.id.stopButton)
 
+        TvRemoteController.initialize(this)
+
         listenButton.setOnClickListener { ensureAudioPermissionThenStart() }
         stopButton.setOnClickListener { stopListeningService() }
+        findViewById<Button>(R.id.reconnectButton).setOnClickListener { TvRemoteController.discoverAndConnect() }
+        findViewById<Button>(R.id.clearButton).setOnClickListener { TvRemoteController.sendClear() }
 
         lifecycleScope.launch {
             AppState.armed.collect { armed ->
@@ -60,6 +66,12 @@ class MainActivity : ComponentActivity() {
         lifecycleScope.launch {
             AppState.lastCard.collect { card ->
                 cardText.text = "Last decoded card: $card"
+            }
+        }
+
+        lifecycleScope.launch {
+            TvRemoteController.connectionState.collect { state ->
+                connectionText.text = "TV: $state"
             }
         }
     }
