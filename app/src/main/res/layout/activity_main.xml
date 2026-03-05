@@ -60,6 +60,28 @@
             android:checked="true"
             android:text="Use speech normalization (misheard words)" />
 
+        <RadioGroup
+            android:id="@+id/languageGroup"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:orientation="horizontal">
+
+            <RadioButton
+                android:id="@+id/languageEn"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:checked="true"
+                android:text="English" />
+
+            <RadioButton
+                android:id="@+id/languageRu"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="20dp"
+                android:text="Russian" />
+        </RadioGroup>
+
         <Button
             android:id="@+id/listenButton"
             android:layout_width="match_parent"

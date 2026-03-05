@@ -110,15 +110,22 @@ class ListeningService : Service() {
         val top = transcripts.take(3).filter { it.isNotBlank() }
         if (top.isEmpty()) return
 
+        val debugTranscript = buildString {
+            append("Recognition variants:\n")
+            top.forEachIndexed { index, line ->
+                append("${index + 1}) $line")
+                if (index < top.lastIndex) append('\n')
+            }
+        }
+        AppState.updateTranscript(debugTranscript)
+
         val useNormalization = AppState.isSpeechNormalizationEnabled()
 
-        data class Candidate(val transcript: String, val parse: CardParseResult)
+        data class Candidate(val parse: CardParseResult)
 
         val candidates = top.map { raw ->
-            Candidate(raw, CardDecoder.parseTranscript(raw, enableNormalization = useNormalization))
+            Candidate(CardDecoder.parseTranscript(raw, enableNormalization = useNormalization))
         }
-
-        AppState.updateTranscript(top.first())
 
         val bestForCard = candidates.maxByOrNull { candidate ->
             scoreForCardPriming(candidate.parse)
@@ -183,12 +190,15 @@ class ListeningService : Service() {
     }
 
     private fun createRecognizerIntent(): Intent {
+        val languageTag = AppState.getRecognitionLanguageTag()
         return Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
             putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
             putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, false)
             putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, false)
             putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 3)
             putExtra(RecognizerIntent.EXTRA_CALLING_PACKAGE, packageName)
+            putExtra(RecognizerIntent.EXTRA_LANGUAGE, languageTag)
+            putExtra(RecognizerIntent.EXTRA_LANGUAGE_PREFERENCE, languageTag)
         }
     }
 

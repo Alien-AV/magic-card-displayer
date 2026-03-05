@@ -26,6 +26,7 @@ object CardDecoder {
     )
 
     private val suitWords = mapOf(
+        // English
         "spade" to "Spades",
         "spades" to "Spades",
         "heart" to "Hearts",
@@ -34,9 +35,37 @@ object CardDecoder {
         "diamonds" to "Diamonds",
         "club" to "Clubs",
         "clubs" to "Clubs",
+        // Russian nouns
+        "пика" to "Spades",
+        "пики" to "Spades",
+        "пик" to "Spades",
+        "черва" to "Hearts",
+        "червы" to "Hearts",
+        "черви" to "Hearts",
+        "червей" to "Hearts",
+        "бубна" to "Diamonds",
+        "бубны" to "Diamonds",
+        "бубей" to "Diamonds",
+        "трефа" to "Clubs",
+        "трефы" to "Clubs",
+        "треф" to "Clubs",
+        "крести" to "Clubs",
+        "крестей" to "Clubs",
+        // Russian adjective forms (e.g. "бубновый король")
+        "пиковый" to "Spades",
+        "пиковая" to "Spades",
+        "червовый" to "Hearts",
+        "червовая" to "Hearts",
+        "бубновый" to "Diamonds",
+        "бубновая" to "Diamonds",
+        "трефовый" to "Clubs",
+        "трефовая" to "Clubs",
+        "крестовый" to "Clubs",
+        "крестовая" to "Clubs"
     )
 
     private val rankWords = mapOf(
+        // English
         "one" to 1,
         "two" to 2,
         "three" to 3,
@@ -53,25 +82,60 @@ object CardDecoder {
         "ace" to 1,
         "jack" to 11,
         "queen" to 12,
-        "king" to 13
+        "king" to 13,
+        // Russian base
+        "один" to 1,
+        "два" to 2,
+        "три" to 3,
+        "четыре" to 4,
+        "пять" to 5,
+        "шесть" to 6,
+        "семь" to 7,
+        "восемь" to 8,
+        "девять" to 9,
+        "десять" to 10,
+        "одиннадцать" to 11,
+        "двенадцать" to 12,
+        "тринадцать" to 13,
+        "туз" to 1,
+        "валет" to 11,
+        "дама" to 12,
+        "король" to 13,
+        // Russian colloquial rank forms
+        "двойка" to 2,
+        "тройка" to 3,
+        "четверка" to 4,
+        "четвёрка" to 4,
+        "пятерка" to 5,
+        "пятёрка" to 5,
+        "шестерка" to 6,
+        "шестёрка" to 6,
+        "семерка" to 7,
+        "семёрка" to 7,
+        "восьмерка" to 8,
+        "восьмёрка" to 8,
+        "девятка" to 9,
+        "десятка" to 10
     )
 
-    private val triggerWords = setOf("magic", "magical", "magically")
+    private val triggerWords = setOf(
+        "magic", "magical", "magically",
+        "магия", "магический", "магически"
+    )
 
     private val normalizationMap = mapOf(
-        // rank mishears
-        "won" to "one",
-        "to" to "two",
-        "too" to "two",
-        "tu" to "two",
-        "for" to "four",
-        "fore" to "four",
-        "ate" to "eight",
+        // English trigger mishears
+        "magik" to "magic",
+        "majic" to "magic",
+        // English suit near forms
+        "clove" to "clubs",
+        "harts" to "hearts",
+        "spire" to "spades"
     )
 
     fun parseTranscript(transcript: String, enableNormalization: Boolean): CardParseResult {
-        val tokens = transcript.lowercase(Locale.US)
-            .split(Regex("[^a-z0-9]+"))
+        val tokens = transcript.lowercase(Locale.ROOT)
+            .split(Regex("[^\\p{L}\\p{Nd}]+"))
             .filter { it.isNotBlank() }
             .map { token -> if (enableNormalization) normalizationMap[token] ?: token else token }
 

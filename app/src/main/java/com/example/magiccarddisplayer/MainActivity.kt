@@ -8,6 +8,7 @@ import android.os.Bundle
 import android.widget.Button
 import android.widget.CheckBox
 import android.widget.EditText
+import android.widget.RadioGroup
 import android.widget.TextView
 import androidx.activity.ComponentActivity
 import androidx.activity.result.contract.ActivityResultContracts
@@ -25,6 +26,7 @@ class MainActivity : ComponentActivity() {
     private lateinit var stopButton: Button
     private lateinit var backgroundUrlInput: EditText
     private lateinit var normalizeSpeechCheck: CheckBox
+    private lateinit var languageGroup: RadioGroup
 
     private val requestAudioPermission =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
@@ -47,12 +49,24 @@ class MainActivity : ComponentActivity() {
         stopButton = findViewById(R.id.stopButton)
         backgroundUrlInput = findViewById(R.id.backgroundUrlInput)
         normalizeSpeechCheck = findViewById(R.id.normalizeSpeechCheck)
+        languageGroup = findViewById(R.id.languageGroup)
 
         TvRemoteController.initialize(this)
         backgroundUrlInput.setText(TvRemoteController.currentIdleBackgroundUrl())
         normalizeSpeechCheck.isChecked = AppState.isSpeechNormalizationEnabled()
         normalizeSpeechCheck.setOnCheckedChangeListener { _, isChecked ->
             AppState.setSpeechNormalizationEnabled(isChecked)
+        }
+
+        if (AppState.getRecognitionLanguageTag() == "ru-RU") {
+            languageGroup.check(R.id.languageRu)
+        } else {
+            languageGroup.check(R.id.languageEn)
+        }
+        languageGroup.setOnCheckedChangeListener { _, checkedId ->
+            val tag = if (checkedId == R.id.languageRu) "ru-RU" else "en-US"
+            AppState.setRecognitionLanguageTag(tag)
+            renderStatus(AppState.armed.value, tag)
         }
 
         listenButton.setOnClickListener { ensureAudioPermissionThenStart() }
@@ -71,7 +85,7 @@ class MainActivity : ComponentActivity() {
 
         lifecycleScope.launch {
             AppState.armed.collect { armed ->
-                statusText.text = if (armed) "Status: ARMED" else "Status: DISARMED"
+                renderStatus(armed, AppState.getRecognitionLanguageTag())
                 listenButton.isEnabled = !armed
                 stopButton.isEnabled = armed
             }
@@ -94,6 +108,14 @@ class MainActivity : ComponentActivity() {
                 connectionText.text = "TV: $state"
             }
         }
+
+        renderStatus(AppState.armed.value, AppState.getRecognitionLanguageTag())
+    }
+
+    private fun renderStatus(armed: Boolean, languageTag: String) {
+        val label = if (languageTag == "ru-RU") "RU" else "EN"
+        val base = if (armed) "Status: ARMED" else "Status: DISARMED"
+        statusText.text = "$base ($label)"
     }
 
     private fun ensureAudioPermissionThenStart() {
