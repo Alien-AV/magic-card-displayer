@@ -26,6 +26,10 @@ class ListeningService : Service() {
     private val handler = Handler(Looper.getMainLooper())
     @Volatile private var listening = false
 
+    private var primedSourceRank: Int? = null
+    private var primedSourceSuit: String? = null
+    private var primedRevealCard: DecodedCard? = null
+
     override fun onCreate() {
         super.onCreate()
         createNotificationChannel()
@@ -38,7 +42,7 @@ class ListeningService : Service() {
             return START_NOT_STICKY
         }
 
-        startForeground(NOTIFICATION_ID, buildNotification("Listening for \"magical\" card phrase"))
+        startForeground(NOTIFICATION_ID, buildNotification("Listening for card phrases and magic trigger words"))
         startListeningLoop()
         return START_STICKY
     }
@@ -81,9 +85,8 @@ class ListeningService : Service() {
 
                 override fun onResults(results: Bundle?) {
                     val matches = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION).orEmpty()
-                    val transcript = matches.firstOrNull().orEmpty()
-                    if (transcript.isNotBlank()) {
-                        handleTranscript(transcript)
+                    if (matches.isNotEmpty()) {
+                        handleTranscripts(matches)
                     }
                     if (listening) {
                         handler.postDelayed({ restartListening() }, 200)
@@ -103,12 +106,66 @@ class ListeningService : Service() {
         recognizer.startListening(createRecognizerIntent())
     }
 
-    private fun handleTranscript(transcript: String) {
-        AppState.updateTranscript(transcript)
-        val decoded = CardDecoder.decode(transcript) ?: return
-        AppState.updateCard(decoded.display)
-        vibrateSuccess()
-        showReveal(decoded)
+    private fun handleTranscripts(transcripts: List<String>) {
+        val top = transcripts.take(3).filter { it.isNotBlank() }
+        if (top.isEmpty()) return
+
+        val debugTranscript = buildString {
+            append("Recognition variants:\n")
+            top.forEachIndexed { index, line ->
+                append("${index + 1}) $line")
+                if (index < top.lastIndex) append('\n')
+            }
+        }
+        AppState.updateTranscript(debugTranscript)
+
+        val useNormalization = AppState.isSpeechNormalizationEnabled()
+
+        data class Candidate(val parse: CardParseResult)
+
+        val candidates = top.map { raw ->
+            Candidate(CardDecoder.parseTranscript(raw, enableNormalization = useNormalization))
+        }
+
+        val bestForCard = candidates.maxByOrNull { candidate ->
+            scoreForCardPriming(candidate.parse)
+        }?.parse
+
+        if (bestForCard != null) {
+            if (bestForCard.rankValue != null) {
+                primedSourceRank = bestForCard.rankValue
+            }
+            if (bestForCard.suitName != null) {
+                primedSourceSuit = bestForCard.suitName
+            }
+
+            val sourceRank = primedSourceRank
+            val sourceSuit = primedSourceSuit
+            if (sourceRank != null && sourceSuit != null && (bestForCard.rankValue != null || bestForCard.suitName != null)) {
+                val sourceCard = CardDecoder.buildCard(sourceRank, sourceSuit)
+                primedRevealCard = CardDecoder.inverse(sourceCard)
+                val primed = primedRevealCard!!
+                AppState.updateCard("Primed: ${primed.rankLabel} of ${primed.suitName} (${primed.display})")
+            }
+        }
+
+        val hasTrigger = candidates.any { it.parse.hasTriggerWord }
+        if (hasTrigger) {
+            val primed = primedRevealCard
+            if (primed != null) {
+                AppState.updateCard("Revealed: ${primed.rankLabel} of ${primed.suitName} (${primed.display})")
+                vibrateSuccess()
+                TvRemoteController.sendReveal(primed)
+                showReveal(primed)
+            }
+        }
+    }
+
+    private fun scoreForCardPriming(parse: CardParseResult): Int {
+        var score = 0
+        if (parse.rankValue != null) score += 1
+        if (parse.suitName != null) score += 1
+        return score
     }
 
     private fun showReveal(card: DecodedCard) {
@@ -133,12 +190,15 @@ class ListeningService : Service() {
     }
 
     private fun createRecognizerIntent(): Intent {
+        val languageTag = AppState.getRecognitionLanguageTag()
         return Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
             putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
             putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, false)
             putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, false)
             putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 3)
             putExtra(RecognizerIntent.EXTRA_CALLING_PACKAGE, packageName)
+            putExtra(RecognizerIntent.EXTRA_LANGUAGE, languageTag)
+            putExtra(RecognizerIntent.EXTRA_LANGUAGE_PREFERENCE, languageTag)
         }
     }
 
@@ -188,7 +248,7 @@ class ListeningService : Service() {
                 "Magic Card Listening",
                 NotificationManager.IMPORTANCE_HIGH
             ).apply {
-                description = "Persistent notification while listening for magical card phrases"
+                description = "Persistent notification while listening for card phrases and trigger words"
             }
             val manager = getSystemService(NotificationManager::class.java)
             manager.createNotificationChannel(channel)

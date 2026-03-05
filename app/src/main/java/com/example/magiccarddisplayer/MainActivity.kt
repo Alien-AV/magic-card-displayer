@@ -6,6 +6,9 @@ import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
 import android.widget.Button
+import android.widget.CheckBox
+import android.widget.EditText
+import android.widget.RadioGroup
 import android.widget.TextView
 import androidx.activity.ComponentActivity
 import androidx.activity.result.contract.ActivityResultContracts
@@ -18,8 +21,12 @@ class MainActivity : ComponentActivity() {
     private lateinit var statusText: TextView
     private lateinit var transcriptText: TextView
     private lateinit var cardText: TextView
+    private lateinit var connectionText: TextView
     private lateinit var listenButton: Button
     private lateinit var stopButton: Button
+    private lateinit var backgroundUrlInput: EditText
+    private lateinit var normalizeSpeechCheck: CheckBox
+    private lateinit var languageGroup: RadioGroup
 
     private val requestAudioPermission =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
@@ -37,15 +44,48 @@ class MainActivity : ComponentActivity() {
         statusText = findViewById(R.id.statusText)
         transcriptText = findViewById(R.id.lastTranscriptText)
         cardText = findViewById(R.id.lastCardText)
+        connectionText = findViewById(R.id.connectionText)
         listenButton = findViewById(R.id.listenButton)
         stopButton = findViewById(R.id.stopButton)
+        backgroundUrlInput = findViewById(R.id.backgroundUrlInput)
+        normalizeSpeechCheck = findViewById(R.id.normalizeSpeechCheck)
+        languageGroup = findViewById(R.id.languageGroup)
+
+        TvRemoteController.initialize(this)
+        backgroundUrlInput.setText(TvRemoteController.currentIdleBackgroundUrl())
+        normalizeSpeechCheck.isChecked = AppState.isSpeechNormalizationEnabled()
+        normalizeSpeechCheck.setOnCheckedChangeListener { _, isChecked ->
+            AppState.setSpeechNormalizationEnabled(isChecked)
+        }
+
+        if (AppState.getRecognitionLanguageTag() == "ru-RU") {
+            languageGroup.check(R.id.languageRu)
+        } else {
+            languageGroup.check(R.id.languageEn)
+        }
+        languageGroup.setOnCheckedChangeListener { _, checkedId ->
+            val tag = if (checkedId == R.id.languageRu) "ru-RU" else "en-US"
+            AppState.setRecognitionLanguageTag(tag)
+            renderStatus(AppState.armed.value, tag)
+        }
 
         listenButton.setOnClickListener { ensureAudioPermissionThenStart() }
         stopButton.setOnClickListener { stopListeningService() }
+        findViewById<Button>(R.id.reconnectButton).setOnClickListener { TvRemoteController.discoverAndConnect() }
+        findViewById<Button>(R.id.clearButton).setOnClickListener { TvRemoteController.sendClear() }
+        findViewById<Button>(R.id.applyBackgroundButton).setOnClickListener {
+            val url = backgroundUrlInput.text?.toString()?.trim().orEmpty()
+            if (url.isBlank()) {
+                connectionText.text = "TV: enter background URL"
+                return@setOnClickListener
+            }
+            TvRemoteController.updateIdleBackground(url)
+            connectionText.text = "TV: sending background update..."
+        }
 
         lifecycleScope.launch {
             AppState.armed.collect { armed ->
-                statusText.text = if (armed) "Status: ARMED" else "Status: DISARMED"
+                renderStatus(armed, AppState.getRecognitionLanguageTag())
                 listenButton.isEnabled = !armed
                 stopButton.isEnabled = armed
             }
@@ -62,6 +102,20 @@ class MainActivity : ComponentActivity() {
                 cardText.text = "Last decoded card: $card"
             }
         }
+
+        lifecycleScope.launch {
+            TvRemoteController.connectionState.collect { state ->
+                connectionText.text = "TV: $state"
+            }
+        }
+
+        renderStatus(AppState.armed.value, AppState.getRecognitionLanguageTag())
+    }
+
+    private fun renderStatus(armed: Boolean, languageTag: String) {
+        val label = if (languageTag == "ru-RU") "RU" else "EN"
+        val base = if (armed) "Status: ARMED" else "Status: DISARMED"
+        statusText.text = "$base ($label)"
     }
 
     private fun ensureAudioPermissionThenStart() {
