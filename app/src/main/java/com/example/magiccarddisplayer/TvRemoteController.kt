@@ -26,7 +26,7 @@ object TvRemoteController {
     private const val DISCOVERY_PORT = 45454
     private const val DISCOVERY_QUERY = "MCD_DISCOVER_TV"
     private const val DISCOVERY_RESPONSE_PREFIX = "MCD_TV:"
-    private const val DEFAULT_IDLE_URL = "https://images.unsplash.com/photo-1511512578047-dfb367046420?auto=format&fit=crop&w=1920&q=80"
+    private const val DEFAULT_IDLE_URL = ""
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val okHttpClient = OkHttpClient.Builder()
@@ -52,6 +52,8 @@ object TvRemoteController {
         idleBackgroundUrl = url
         sendInitConfig()
     }
+
+    fun currentIdleBackgroundUrl(): String = idleBackgroundUrl
 
     fun discoverAndConnect() {
         scope.launch {

@@ -3,25 +3,26 @@
     android:id="@+id/root"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:focusable="true"
+    android:background="#000000"
     android:clickable="true"
-    android:background="#000000">
+    android:focusable="true">
 
     <ImageView
         android:id="@+id/idleBackground"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:scaleType="centerCrop"
-        android:contentDescription="Idle background" />
+        android:contentDescription="Idle background"
+        android:scaleType="centerCrop" />
 
     <ImageView
         android:id="@+id/cardImage"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:visibility="gone"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
         android:adjustViewBounds="true"
+        android:contentDescription="Revealed card"
         android:scaleType="fitCenter"
-        android:contentDescription="Revealed card" />
+        android:visibility="gone" />
 
     <TextView
         android:id="@+id/statusText"

@@ -18,6 +18,8 @@ class TvDisplayActivity : ComponentActivity() {
     private lateinit var statusText: TextView
 
     private val commandServer by lazy { TvCommandServer(this) }
+    private var lastRevealedCardCode: String? = null
+    private var lastBackgroundVersion: Long = -1L
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -27,22 +29,39 @@ class TvDisplayActivity : ComponentActivity() {
         cardImage = findViewById(R.id.cardImage)
         statusText = findViewById(R.id.statusText)
 
-        findViewById<View>(R.id.root).setOnClickListener { dismissReveal() }
+        idleBackground.load("file:///android_asset/cards/card-backs-bg.png")
+
+        val root = findViewById<View>(R.id.root)
+        root.setOnClickListener { dismissReveal() }
+        root.post {
+            cardImage.maxHeight = (root.height * 0.72f).toInt().coerceAtLeast(1)
+        }
 
         lifecycleScope.launch {
             commandServer.uiState.collectLatest { state ->
                 statusText.text = state.status
-                state.idleBackgroundFile?.let { file -> idleBackground.load(file) }
-                if (state.revealedCardCode != null) {
-                    val resId = CardImageResolver.resourceForCode(this@TvDisplayActivity, state.revealedCardCode)
-                    if (resId != 0) {
-                        cardImage.setImageResource(resId)
-                        cardImage.visibility = View.VISIBLE
+                if (state.idleBackgroundFile != null && state.idleBackgroundVersion != lastBackgroundVersion) {
+                    idleBackground.load(state.idleBackgroundFile)
+                    lastBackgroundVersion = state.idleBackgroundVersion
+                }
+
+                val revealedCode = state.revealedCardCode
+                if (revealedCode != null) {
+                    val assetUri = CardImageResolver.assetUriForCode(this@TvDisplayActivity, revealedCode)
+                    if (assetUri != null) {
+                        cardImage.load(assetUri)
+                        showCard(revealedCode)
                     } else {
-                        cardImage.visibility = View.GONE
+                        val resId = CardImageResolver.resourceForCode(this@TvDisplayActivity, revealedCode)
+                        if (resId != 0) {
+                            cardImage.setImageResource(resId)
+                            showCard(revealedCode)
+                        } else {
+                            hideCard()
+                        }
                     }
                 } else {
-                    cardImage.visibility = View.GONE
+                    hideCard()
                 }
             }
         }
@@ -65,5 +84,36 @@ class TvDisplayActivity : ComponentActivity() {
 
     private fun dismissReveal() {
         commandServer.clearReveal()
+    }
+
+    private fun showCard(code: String) {
+        cardImage.animate().cancel()
+        if (cardImage.visibility != View.VISIBLE || lastRevealedCardCode != code) {
+            cardImage.alpha = 0f
+            cardImage.visibility = View.VISIBLE
+            cardImage.animate().alpha(1f).setDuration(2400).start()
+        } else {
+            cardImage.visibility = View.VISIBLE
+            cardImage.alpha = 1f
+        }
+        lastRevealedCardCode = code
+    }
+
+    private fun hideCard() {
+        cardImage.animate().cancel()
+        if (cardImage.visibility == View.VISIBLE) {
+            cardImage.animate()
+                .alpha(0f)
+                .setDuration(260)
+                .withEndAction {
+                    cardImage.visibility = View.GONE
+                    cardImage.alpha = 1f
+                }
+                .start()
+        } else {
+            cardImage.visibility = View.GONE
+            cardImage.alpha = 1f
+        }
+        lastRevealedCardCode = null
     }
 }

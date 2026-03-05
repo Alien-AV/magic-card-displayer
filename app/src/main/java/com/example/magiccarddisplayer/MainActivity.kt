@@ -6,6 +6,7 @@ import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
 import android.widget.Button
+import android.widget.EditText
 import android.widget.TextView
 import androidx.activity.ComponentActivity
 import androidx.activity.result.contract.ActivityResultContracts
@@ -21,6 +22,7 @@ class MainActivity : ComponentActivity() {
     private lateinit var connectionText: TextView
     private lateinit var listenButton: Button
     private lateinit var stopButton: Button
+    private lateinit var backgroundUrlInput: EditText
 
     private val requestAudioPermission =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
@@ -41,13 +43,24 @@ class MainActivity : ComponentActivity() {
         connectionText = findViewById(R.id.connectionText)
         listenButton = findViewById(R.id.listenButton)
         stopButton = findViewById(R.id.stopButton)
+        backgroundUrlInput = findViewById(R.id.backgroundUrlInput)
 
         TvRemoteController.initialize(this)
+        backgroundUrlInput.setText(TvRemoteController.currentIdleBackgroundUrl())
 
         listenButton.setOnClickListener { ensureAudioPermissionThenStart() }
         stopButton.setOnClickListener { stopListeningService() }
         findViewById<Button>(R.id.reconnectButton).setOnClickListener { TvRemoteController.discoverAndConnect() }
         findViewById<Button>(R.id.clearButton).setOnClickListener { TvRemoteController.sendClear() }
+        findViewById<Button>(R.id.applyBackgroundButton).setOnClickListener {
+            val url = backgroundUrlInput.text?.toString()?.trim().orEmpty()
+            if (url.isBlank()) {
+                connectionText.text = "TV: enter background URL"
+                return@setOnClickListener
+            }
+            TvRemoteController.updateIdleBackground(url)
+            connectionText.text = "TV: sending background update..."
+        }
 
         lifecycleScope.launch {
             AppState.armed.collect { armed ->

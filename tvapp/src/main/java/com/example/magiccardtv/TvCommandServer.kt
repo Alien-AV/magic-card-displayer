@@ -22,6 +22,7 @@ import java.net.URL
 data class TvUiState(
     val status: String = "Waiting for phone...",
     val idleBackgroundFile: File? = null,
+    val idleBackgroundVersion: Long = 0L,
     val revealedCardCode: String? = null
 )
 
@@ -93,7 +94,8 @@ class TvCommandServer(private val context: Context) {
                         if (cached != null) {
                             _uiState.value = _uiState.value.copy(
                                 status = "Configured from phone",
-                                idleBackgroundFile = cached
+                                idleBackgroundFile = cached,
+                                idleBackgroundVersion = System.currentTimeMillis()
                             )
                         }
                     }

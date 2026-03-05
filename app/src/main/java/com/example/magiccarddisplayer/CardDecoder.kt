@@ -11,12 +11,34 @@ data class DecodedCard(
     val display: String = "$rankLabel$suitSymbol"
 }
 
+data class CardParseResult(
+    val rankValue: Int?,
+    val suitName: String?,
+    val hasTriggerWord: Boolean
+)
+
 object CardDecoder {
-    private val suitMap = mapOf(
-        "shuffles" to ("♠" to "Spades"),
-        "times" to ("♥" to "Hearts"),
-        "cuts" to ("♦" to "Diamonds"),
-        "tricks" to ("♣" to "Clubs")
+    private val suitNameToSymbol = mapOf(
+        "Spades" to "♠",
+        "Hearts" to "♥",
+        "Diamonds" to "♦",
+        "Clubs" to "♣"
+    )
+
+    private val suitWords = mapOf(
+        "spade" to "Spades",
+        "spades" to "Spades",
+        "heart" to "Hearts",
+        "hearts" to "Hearts",
+        "diamond" to "Diamonds",
+        "diamonds" to "Diamonds",
+        "club" to "Clubs",
+        "clubs" to "Clubs",
+        // Legacy cue words kept as fallback.
+        "shuffles" to "Spades",
+        "times" to "Hearts",
+        "cuts" to "Diamonds",
+        "tricks" to "Clubs"
     )
 
     private val rankWords = mapOf(
@@ -39,25 +61,45 @@ object CardDecoder {
         "king" to 13
     )
 
-    fun decode(transcript: String): DecodedCard? {
-        val normalized = transcript.lowercase(Locale.US)
-        val tokens = normalized.split(Regex("[^a-z0-9]+"))
+    private val triggerWords = setOf("magic", "magical", "magically")
+
+    fun parseTranscript(transcript: String): CardParseResult {
+        val tokens = transcript.lowercase(Locale.US)
+            .split(Regex("[^a-z0-9]+"))
             .filter { it.isNotBlank() }
 
-        if (!tokens.contains("magical")) return null
+        var lastRank: Int? = null
+        var lastSuit: String? = null
 
-        val suitEntry = tokens.firstNotNullOfOrNull { token ->
-            suitMap[token]?.let { (symbol, name) -> token to (symbol to name) }
-        } ?: return null
+        for (token in tokens) {
+            parseRank(token)?.let { lastRank = it }
+            suitWords[token]?.let { lastSuit = it }
+        }
 
-        val rankValue = tokens.firstNotNullOfOrNull { token -> parseRank(token) } ?: return null
+        val hasTrigger = tokens.any { it in triggerWords }
+        return CardParseResult(rankValue = lastRank, suitName = lastSuit, hasTriggerWord = hasTrigger)
+    }
 
+    fun buildCard(rankValue: Int, suitName: String): DecodedCard {
+        val symbol = suitNameToSymbol[suitName] ?: "♣"
         return DecodedCard(
             rankValue = rankValue,
             rankLabel = rankToLabel(rankValue),
-            suitSymbol = suitEntry.second.first,
-            suitName = suitEntry.second.second
+            suitSymbol = symbol,
+            suitName = suitName
         )
+    }
+
+    fun inverse(card: DecodedCard): DecodedCard {
+        val inverseRank = 14 - card.rankValue
+        val inverseSuit = when (card.suitName) {
+            "Spades" -> "Hearts"
+            "Hearts" -> "Spades"
+            "Clubs" -> "Diamonds"
+            "Diamonds" -> "Clubs"
+            else -> "Clubs"
+        }
+        return buildCard(inverseRank, inverseSuit)
     }
 
     private fun parseRank(token: String): Int? {

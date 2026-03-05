@@ -26,6 +26,10 @@ class ListeningService : Service() {
     private val handler = Handler(Looper.getMainLooper())
     @Volatile private var listening = false
 
+    private var primedSourceRank: Int? = null
+    private var primedSourceSuit: String? = null
+    private var primedRevealCard: DecodedCard? = null
+
     override fun onCreate() {
         super.onCreate()
         createNotificationChannel()
@@ -38,7 +42,7 @@ class ListeningService : Service() {
             return START_NOT_STICKY
         }
 
-        startForeground(NOTIFICATION_ID, buildNotification("Listening for \"magical\" card phrase"))
+        startForeground(NOTIFICATION_ID, buildNotification("Listening for card phrases and magic trigger words"))
         startListeningLoop()
         return START_STICKY
     }
@@ -105,11 +109,33 @@ class ListeningService : Service() {
 
     private fun handleTranscript(transcript: String) {
         AppState.updateTranscript(transcript)
-        val decoded = CardDecoder.decode(transcript) ?: return
-        AppState.updateCard(decoded.display)
-        vibrateSuccess()
-        TvRemoteController.sendReveal(decoded)
-        showReveal(decoded)
+        val parse = CardDecoder.parseTranscript(transcript)
+
+        if (parse.rankValue != null) {
+            primedSourceRank = parse.rankValue
+        }
+        if (parse.suitName != null) {
+            primedSourceSuit = parse.suitName
+        }
+
+        val sourceRank = primedSourceRank
+        val sourceSuit = primedSourceSuit
+        if (sourceRank != null && sourceSuit != null && (parse.rankValue != null || parse.suitName != null)) {
+            val sourceCard = CardDecoder.buildCard(sourceRank, sourceSuit)
+            primedRevealCard = CardDecoder.inverse(sourceCard)
+            val primed = primedRevealCard!!
+            AppState.updateCard("Primed: ${primed.rankLabel} of ${primed.suitName} (${primed.display})")
+        }
+
+        if (parse.hasTriggerWord) {
+            val primed = primedRevealCard
+            if (primed != null) {
+                AppState.updateCard("Revealed: ${primed.rankLabel} of ${primed.suitName} (${primed.display})")
+                vibrateSuccess()
+                TvRemoteController.sendReveal(primed)
+                showReveal(primed)
+            }
+        }
     }
 
     private fun showReveal(card: DecodedCard) {
@@ -189,7 +215,7 @@ class ListeningService : Service() {
                 "Magic Card Listening",
                 NotificationManager.IMPORTANCE_HIGH
             ).apply {
-                description = "Persistent notification while listening for magical card phrases"
+                description = "Persistent notification while listening for card phrases and trigger words"
             }
             val manager = getSystemService(NotificationManager::class.java)
             manager.createNotificationChannel(channel)
