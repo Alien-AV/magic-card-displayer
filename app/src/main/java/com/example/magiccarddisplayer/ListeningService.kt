@@ -85,9 +85,8 @@ class ListeningService : Service() {
 
                 override fun onResults(results: Bundle?) {
                     val matches = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION).orEmpty()
-                    val transcript = matches.firstOrNull().orEmpty()
-                    if (transcript.isNotBlank()) {
-                        handleTranscript(transcript)
+                    if (matches.isNotEmpty()) {
+                        handleTranscripts(matches)
                     }
                     if (listening) {
                         handler.postDelayed({ restartListening() }, 200)
@@ -107,27 +106,44 @@ class ListeningService : Service() {
         recognizer.startListening(createRecognizerIntent())
     }
 
-    private fun handleTranscript(transcript: String) {
-        AppState.updateTranscript(transcript)
-        val parse = CardDecoder.parseTranscript(transcript)
+    private fun handleTranscripts(transcripts: List<String>) {
+        val top = transcripts.take(3).filter { it.isNotBlank() }
+        if (top.isEmpty()) return
 
-        if (parse.rankValue != null) {
-            primedSourceRank = parse.rankValue
-        }
-        if (parse.suitName != null) {
-            primedSourceSuit = parse.suitName
-        }
+        val useNormalization = AppState.isSpeechNormalizationEnabled()
 
-        val sourceRank = primedSourceRank
-        val sourceSuit = primedSourceSuit
-        if (sourceRank != null && sourceSuit != null && (parse.rankValue != null || parse.suitName != null)) {
-            val sourceCard = CardDecoder.buildCard(sourceRank, sourceSuit)
-            primedRevealCard = CardDecoder.inverse(sourceCard)
-            val primed = primedRevealCard!!
-            AppState.updateCard("Primed: ${primed.rankLabel} of ${primed.suitName} (${primed.display})")
+        data class Candidate(val transcript: String, val parse: CardParseResult)
+
+        val candidates = top.map { raw ->
+            Candidate(raw, CardDecoder.parseTranscript(raw, enableNormalization = useNormalization))
         }
 
-        if (parse.hasTriggerWord) {
+        AppState.updateTranscript(top.first())
+
+        val bestForCard = candidates.maxByOrNull { candidate ->
+            scoreForCardPriming(candidate.parse)
+        }?.parse
+
+        if (bestForCard != null) {
+            if (bestForCard.rankValue != null) {
+                primedSourceRank = bestForCard.rankValue
+            }
+            if (bestForCard.suitName != null) {
+                primedSourceSuit = bestForCard.suitName
+            }
+
+            val sourceRank = primedSourceRank
+            val sourceSuit = primedSourceSuit
+            if (sourceRank != null && sourceSuit != null && (bestForCard.rankValue != null || bestForCard.suitName != null)) {
+                val sourceCard = CardDecoder.buildCard(sourceRank, sourceSuit)
+                primedRevealCard = CardDecoder.inverse(sourceCard)
+                val primed = primedRevealCard!!
+                AppState.updateCard("Primed: ${primed.rankLabel} of ${primed.suitName} (${primed.display})")
+            }
+        }
+
+        val hasTrigger = candidates.any { it.parse.hasTriggerWord }
+        if (hasTrigger) {
             val primed = primedRevealCard
             if (primed != null) {
                 AppState.updateCard("Revealed: ${primed.rankLabel} of ${primed.suitName} (${primed.display})")
@@ -136,6 +152,13 @@ class ListeningService : Service() {
                 showReveal(primed)
             }
         }
+    }
+
+    private fun scoreForCardPriming(parse: CardParseResult): Int {
+        var score = 0
+        if (parse.rankValue != null) score += 1
+        if (parse.suitName != null) score += 1
+        return score
     }
 
     private fun showReveal(card: DecodedCard) {

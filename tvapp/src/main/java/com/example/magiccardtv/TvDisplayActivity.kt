@@ -1,6 +1,8 @@
 package com.example.magiccardtv
 
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.view.KeyEvent
 import android.view.View
 import android.widget.ImageView
@@ -18,6 +20,9 @@ class TvDisplayActivity : ComponentActivity() {
     private lateinit var statusText: TextView
 
     private val commandServer by lazy { TvCommandServer(this) }
+    private val uiHandler = Handler(Looper.getMainLooper())
+
+    private var hideStatusRunnable: Runnable? = null
     private var lastRevealedCardCode: String? = null
     private var lastBackgroundVersion: Long = -1L
 
@@ -30,6 +35,7 @@ class TvDisplayActivity : ComponentActivity() {
         statusText = findViewById(R.id.statusText)
 
         idleBackground.load("file:///android_asset/cards/card-backs-bg.png")
+        showWaitingStatus()
 
         val root = findViewById<View>(R.id.root)
         root.setOnClickListener { dismissReveal() }
@@ -39,7 +45,8 @@ class TvDisplayActivity : ComponentActivity() {
 
         lifecycleScope.launch {
             commandServer.uiState.collectLatest { state ->
-                statusText.text = state.status
+                renderStatus(state.status)
+
                 if (state.idleBackgroundFile != null && state.idleBackgroundVersion != lastBackgroundVersion) {
                     idleBackground.load(state.idleBackgroundFile)
                     lastBackgroundVersion = state.idleBackgroundVersion
@@ -70,6 +77,7 @@ class TvDisplayActivity : ComponentActivity() {
     }
 
     override fun onDestroy() {
+        hideStatusRunnable?.let(uiHandler::removeCallbacks)
         commandServer.stop()
         super.onDestroy()
     }
@@ -84,6 +92,28 @@ class TvDisplayActivity : ComponentActivity() {
 
     private fun dismissReveal() {
         commandServer.clearReveal()
+    }
+
+    private fun renderStatus(rawStatus: String) {
+        when {
+            rawStatus.startsWith("Phone connected") -> showConnectedStatusTemporary()
+            rawStatus.startsWith("Waiting for phone") || rawStatus.startsWith("Phone disconnected") -> showWaitingStatus()
+            else -> Unit
+        }
+    }
+
+    private fun showWaitingStatus() {
+        hideStatusRunnable?.let(uiHandler::removeCallbacks)
+        statusText.text = "Waiting for phone..."
+        statusText.visibility = View.VISIBLE
+    }
+
+    private fun showConnectedStatusTemporary() {
+        hideStatusRunnable?.let(uiHandler::removeCallbacks)
+        statusText.text = "Phone connected"
+        statusText.visibility = View.VISIBLE
+        hideStatusRunnable = Runnable { statusText.visibility = View.GONE }
+        uiHandler.postDelayed(hideStatusRunnable!!, 5000)
     }
 
     private fun showCard(code: String) {

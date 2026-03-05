@@ -34,11 +34,6 @@ object CardDecoder {
         "diamonds" to "Diamonds",
         "club" to "Clubs",
         "clubs" to "Clubs",
-        // Legacy cue words kept as fallback.
-        "shuffles" to "Spades",
-        "times" to "Hearts",
-        "cuts" to "Diamonds",
-        "tricks" to "Clubs"
     )
 
     private val rankWords = mapOf(
@@ -63,10 +58,22 @@ object CardDecoder {
 
     private val triggerWords = setOf("magic", "magical", "magically")
 
-    fun parseTranscript(transcript: String): CardParseResult {
+    private val normalizationMap = mapOf(
+        // rank mishears
+        "won" to "one",
+        "to" to "two",
+        "too" to "two",
+        "tu" to "two",
+        "for" to "four",
+        "fore" to "four",
+        "ate" to "eight",
+    )
+
+    fun parseTranscript(transcript: String, enableNormalization: Boolean): CardParseResult {
         val tokens = transcript.lowercase(Locale.US)
             .split(Regex("[^a-z0-9]+"))
             .filter { it.isNotBlank() }
+            .map { token -> if (enableNormalization) normalizationMap[token] ?: token else token }
 
         var lastRank: Int? = null
         var lastSuit: String? = null

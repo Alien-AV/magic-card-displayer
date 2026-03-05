@@ -52,6 +52,14 @@
             android:text="Set TV Background URL"
             android:textAllCaps="false" />
 
+        <CheckBox
+            android:id="@+id/normalizeSpeechCheck"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:checked="true"
+            android:text="Use speech normalization (misheard words)" />
+
         <Button
             android:id="@+id/listenButton"
             android:layout_width="match_parent"

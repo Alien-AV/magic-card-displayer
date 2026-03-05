@@ -6,6 +6,7 @@ import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
 import android.widget.Button
+import android.widget.CheckBox
 import android.widget.EditText
 import android.widget.TextView
 import androidx.activity.ComponentActivity
@@ -23,6 +24,7 @@ class MainActivity : ComponentActivity() {
     private lateinit var listenButton: Button
     private lateinit var stopButton: Button
     private lateinit var backgroundUrlInput: EditText
+    private lateinit var normalizeSpeechCheck: CheckBox
 
     private val requestAudioPermission =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
@@ -44,9 +46,14 @@ class MainActivity : ComponentActivity() {
         listenButton = findViewById(R.id.listenButton)
         stopButton = findViewById(R.id.stopButton)
         backgroundUrlInput = findViewById(R.id.backgroundUrlInput)
+        normalizeSpeechCheck = findViewById(R.id.normalizeSpeechCheck)
 
         TvRemoteController.initialize(this)
         backgroundUrlInput.setText(TvRemoteController.currentIdleBackgroundUrl())
+        normalizeSpeechCheck.isChecked = AppState.isSpeechNormalizationEnabled()
+        normalizeSpeechCheck.setOnCheckedChangeListener { _, isChecked ->
+            AppState.setSpeechNormalizationEnabled(isChecked)
+        }
 
         listenButton.setOnClickListener { ensureAudioPermissionThenStart() }
         stopButton.setOnClickListener { stopListeningService() }
