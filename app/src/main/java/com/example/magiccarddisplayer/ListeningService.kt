@@ -132,7 +132,6 @@ class ListeningService : Service() {
                 AppState.updateCard("Revealed: ${primed.rankLabel} of ${primed.suitName} (${primed.display})")
                 vibrateSuccess()
                 TvRemoteController.sendReveal(primed)
-                showReveal(primed)
             }
         }
     }
@@ -142,15 +141,6 @@ class ListeningService : Service() {
         if (parse.rankValue != null) score += 1
         if (parse.suitName != null) score += 1
         return score
-    }
-
-    private fun showReveal(card: DecodedCard) {
-        val revealIntent = Intent(this, RevealActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
-            putExtra(EXTRA_CARD_DISPLAY, card.display)
-            putExtra(EXTRA_CARD_DETAILS, "${card.rankLabel} of ${card.suitName}")
-        }
-        startActivity(revealIntent)
     }
 
     private fun vibrateSuccess() {
@@ -214,8 +204,6 @@ class ListeningService : Service() {
 
     companion object {
         const val ACTION_STOP = "com.example.magiccarddisplayer.action.STOP"
-        const val EXTRA_CARD_DISPLAY = "extra.card.display"
-        const val EXTRA_CARD_DETAILS = "extra.card.details"
         private const val CHANNEL_ID = "magic_card_listening"
         private const val NOTIFICATION_ID = 7
     }

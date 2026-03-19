@@ -19,7 +19,7 @@ This project now contains **two Android Studio app modules** that work together 
 - On successful decode:
   1. Vibrates once.
   2. Sends `REVEAL` over Wi‑Fi to TV app.
-  3. Also shows local phone reveal activity (for debugging).
+  3. Updates passive phone status text; no phone popup is shown.
 - On connect/open, sends `INIT` with:
   - pairing token/shared secret
   - idle background image URL for the TV.
@@ -62,7 +62,7 @@ If images are missing, TV `REVEAL` messages are still received but no card image
 3. Arm with **ARM Listening**.
 4. Speak a valid phrase such as: `magical seven shuffles`.
 5. Verify:
-   - phone vibrates and shows local reveal
+   - phone vibrates and updates the passive status/result text
    - TV shows the corresponding playing card image fullscreen.
 6. Tap **Send CLEAR to TV** on phone (or tap TV screen / remote OK) and verify TV returns to idle background.
 7. Update idle background URL in code if needed; on reconnect/init TV downloads and caches it.

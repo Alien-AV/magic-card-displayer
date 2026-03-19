@@ -34,7 +34,7 @@ class MainActivity : ComponentActivity() {
             if (granted) {
                 startListeningService()
             } else {
-                statusText.text = "Status: permission denied"
+                statusText.text = "Microphone access is required"
             }
         }
 
@@ -89,11 +89,11 @@ class MainActivity : ComponentActivity() {
         findViewById<Button>(R.id.applyBackgroundButton).setOnClickListener {
             val url = backgroundUrlInput.text?.toString()?.trim().orEmpty()
             if (url.isBlank()) {
-                connectionText.text = "TV: enter background URL"
+                connectionText.text = "TV display: enter a background image URL"
                 return@setOnClickListener
             }
             TvRemoteController.updateIdleBackground(url)
-            connectionText.text = "TV: sending background update..."
+            connectionText.text = "TV display: sending background update..."
         }
 
         lifecycleScope.launch {
@@ -106,19 +106,19 @@ class MainActivity : ComponentActivity() {
 
         lifecycleScope.launch {
             AppState.lastTranscript.collect { transcript ->
-                transcriptText.text = "Last transcript: $transcript"
+                transcriptText.text = "Heard: $transcript"
             }
         }
 
         lifecycleScope.launch {
             AppState.lastCard.collect { card ->
-                cardText.text = "Last decoded card: $card"
+                cardText.text = "Result: $card"
             }
         }
 
         lifecycleScope.launch {
             TvRemoteController.connectionState.collect { state ->
-                connectionText.text = "TV: $state"
+                connectionText.text = "TV display: $state"
             }
         }
 
@@ -128,7 +128,7 @@ class MainActivity : ComponentActivity() {
     private fun renderStatus(armed: Boolean, languageTag: String, toolkit: SpeechToolkit) {
         val lang = if (languageTag == "ru-RU") "RU" else "EN"
         val toolkitLabel = if (toolkit == SpeechToolkit.VOSK) "VOSK" else "ANDROID"
-        val base = if (armed) "Status: ARMED" else "Status: DISARMED"
+        val base = if (armed) "Listening is on" else "Listening is off"
         statusText.text = "$base ($lang, $toolkitLabel)"
     }
 

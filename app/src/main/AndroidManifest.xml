@@ -5,8 +5,6 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
     <uses-permission android:name="android.permission.VIBRATE" />
-    <uses-permission android:name="android.permission.WAKE_LOCK" />
-    <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
@@ -19,15 +17,6 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.MagicCardDisplayer"
         android:usesCleartextTraffic="true">
-
-        <activity
-            android:name=".RevealActivity"
-            android:excludeFromRecents="true"
-            android:exported="false"
-            android:launchMode="singleTop"
-            android:showWhenLocked="true"
-            android:turnScreenOn="true"
-            android:theme="@style/Theme.MagicCardDisplayer.Reveal" />
 
         <activity
             android:name=".MainActivity"
